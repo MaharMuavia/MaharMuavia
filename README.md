@@ -17,5 +17,5 @@ Skills
 Projects
 I worked at different projects as a Data Scientist/Data Analyst with extensive experience. I have prepared Different Machine Learning models.
 Connect with Me
-[Instagram] https://www.instagram.com/beingboss/
+[Instagram] https://www.instagram.com/beingboss26/
 
