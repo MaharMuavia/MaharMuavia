@@ -115,15 +115,28 @@
 ### 💼 Featured Projects
 
 <p align="center">
-  <a href="https://github.com/MaharMuavia">
-    <img src="https://github-readme-stats.vercel.app/api/pin/?username=MaharMuavia&repo=REPO_NAME_1&theme=tokyonight&hide_border=true" alt="Project 1"/>
+  <a href="https://github.com/MaharMuavia/memopilot-iq" target="_blank">
+    <img src="https://github-readme-stats.vercel.app/api/pin/?username=MaharMuavia&repo=memopilot-iq&theme=tokyonight&hide_border=true" alt="MemoPilot IQ"/>
   </a>
-  <a href="https://github.com/MaharMuavia">
-    <img src="https://github-readme-stats.vercel.app/api/pin/?username=MaharMuavia&repo=REPO_NAME_2&theme=tokyonight&hide_border=true" alt="Project 2"/>
+  <a href="https://github.com/MaharMuavia/failurelens_iq" target="_blank">
+    <img src="https://github-readme-stats.vercel.app/api/pin/?username=MaharMuavia&repo=failurelens_iq&theme=tokyonight&hide_border=true" alt="FailureLens IQ"/>
+  </a>
+</p>
+<p align="center">
+  <a href="https://github.com/MaharMuavia/DataVerse_Ai" target="_blank">
+    <img src="https://github-readme-stats.vercel.app/api/pin/?username=MaharMuavia&repo=DataVerse_Ai&theme=tokyonight&hide_border=true" alt="DataVerse AI"/>
   </a>
 </p>
 
-> 💡 Replace `REPO_NAME_1` / `REPO_NAME_2` with your actual repository names to showcase them.
+<div align="center">
+
+| Project | Description |
+|---------|-------------|
+| 🧠 **[MemoPilot IQ](https://github.com/MaharMuavia/memopilot-iq)** | A self-improving persistent-memory AI agent that remembers, forgets, and explains what matters. |
+| 🔍 **[FailureLens IQ](https://github.com/MaharMuavia/failurelens_iq)** | AI-powered failure analysis & diagnostics platform. |
+| 🌌 **[DataVerse AI](https://github.com/MaharMuavia/DataVerse_Ai)** | An AI-driven data intelligence & analytics platform. |
+
+</div>
 
 ---
 
