@@ -145,6 +145,9 @@
   <a href="https://github.com/MaharMuavia/DataVerse_Ai" target="_blank">
     <img src="https://github-readme-stats.vercel.app/api/pin/?username=MaharMuavia&repo=DataVerse_Ai&theme=tokyonight&hide_border=true" alt="DataVerse AI"/>
   </a>
+  <a href="https://github.com/MaharMuavia/ai-khata1" target="_blank">
+    <img src="https://github-readme-stats.vercel.app/api/pin/?username=MaharMuavia&repo=ai-khata1&theme=tokyonight&hide_border=true" alt="AI Khata"/>
+  </a>
 </p>
 
 <div align="center">
@@ -152,8 +155,9 @@
 | Project | Description |
 |---------|-------------|
 | 🧠 **[MemoPilot IQ](https://github.com/MaharMuavia/memopilot-iq)** | A self-improving persistent-memory AI agent that remembers, forgets, and explains what matters. |
-| 🔍 **[FailureLens IQ](https://github.com/MaharMuavia/failurelens_iq)** | AI-powered failure analysis & diagnostics platform. |
-| 🌌 **[DataVerse AI](https://github.com/MaharMuavia/DataVerse_Ai)** | An AI-driven data intelligence & analytics platform. |
+| 🔍 **[FailureLens IQ](https://github.com/MaharMuavia/failurelens_iq)** | AI-powered failure analysis & root-cause diagnostics platform for debugging at scale. |
+| 🌌 **[DataVerse AI](https://github.com/MaharMuavia/DataVerse_Ai)** | An AI-driven data intelligence & analytics platform for turning raw data into insights. |
+| 🧾 **[AI Khata](https://github.com/MaharMuavia/ai-khata1)** | Voice-powered AI ledger for small businesses — record sales, expenses & udhaar in Urdu using Gemini. |
 
 </div>
 
