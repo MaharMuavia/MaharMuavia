@@ -1,6 +1,6 @@
 <!-- ====== HEADER / BANNER ====== -->
 <a href="https://muhammadmuavia.me/">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0A66C2,100:1A1A2E&height=200&section=header&text=Muhammad%20Muavia&fontSize=55&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Data%20Scientist%20%C2%B7%20AI%20Engineer%20%C2%B7%20Agentic%20AI%20Developer&descAlignY=58&descSize=18" width="100%"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0A66C2,100:1A1A2E&height=200&section=header&text=Mahar%20Muavia&fontSize=55&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Data%20Scientist%20%C2%B7%20AI%20Engineer%20%C2%B7%20Agentic%20AI%20Developer&descAlignY=58&descSize=18" width="100%"/>
 </a>
 
 <!-- ====== TYPING ANIMATION ====== -->
