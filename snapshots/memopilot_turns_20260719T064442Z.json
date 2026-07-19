@@ -1,0 +1,21 @@
+{
+  "user_id": "bob",
+  "project_id": "p",
+  "session_id": "shared-session",
+  "message": "I prefer Django.",
+  "answer": "Regarding \"I prefer Django.\" \u2014 no relevant long-term memory was found yet, so I am answering from the current message only. (Offline demo mode.)",
+  "used_memory_ids": [],
+  "memory_actions": {
+    "created": [
+      {
+        "memory_id": "mem_261fc1c934b2",
+        "type": "preference",
+        "content": "I prefer Django."
+      }
+    ],
+    "updated": [],
+    "superseded": [],
+    "forgotten": [],
+    "redacted": []
+  }
+}

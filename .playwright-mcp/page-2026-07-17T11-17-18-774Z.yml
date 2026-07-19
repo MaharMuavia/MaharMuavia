@@ -1,0 +1,108 @@
+- generic [ref=f2e3]:
+  - banner [ref=f2e4]:
+    - generic [ref=f2e5]:
+      - generic [ref=f2e6]:
+        - link "Home" [ref=f2e7] [cursor=pointer]:
+          - /url: /
+        - generic [ref=f2e11]:
+          - generic [ref=f2e12]: M
+          - generic [ref=f2e13]:
+            - heading "MemoPilot IQ" [level=1] [ref=f2e14]
+            - paragraph [ref=f2e15]: qwen-memoryagent · session-111649
+      - generic [ref=f2e16]:
+        - generic "Running locally (SQLite + local vectors)" [ref=f2e87]: Local
+        - generic "Qwen online · qwen3.7-max" [ref=f2e89]: Qwen Online
+        - 'generic "Memory store: sqlite+local-vectors" [ref=f2e91]': SQLite
+        - link "GitHub" [ref=f2e18] [cursor=pointer]:
+          - /url: https://github.com/MaharMuavia/memopilot-iq
+  - generic [ref=f2e21]:
+    - generic [ref=f2e22]:
+      - generic [ref=f2e23]:
+        - generic [ref=f2e28]:
+          - heading "Run the 90-second Memory Lifecycle Demo" [level=3] [ref=f2e29]
+          - paragraph [ref=f2e30]: "Replays 4 sessions: memory creation → cross-session recall → supersession → critical recall, with full trace accounting."
+          - paragraph [ref=f2e31]: This replay is deterministic; use Chat for a live Qwen response.
+        - generic [ref=f2e32]:
+          - button "Hide results" [ref=f2e92] [cursor=pointer]
+          - button "Run Judge Demo" [ref=f2e33] [cursor=pointer]
+      - generic [ref=f2e93]:
+        - generic [ref=f2e94]:
+          - generic [ref=f2e95]:
+            - generic [ref=f2e96]: "1"
+            - generic [ref=f2e97]: session-001
+            - generic [ref=f2e98]: “I am building a Qwen Hackathon Track 1 MemoryAgent project. I prefer FastAPI backend, React + Vite frontend, Alibaba Cloud deployment, clean light UI, and short practical answers. Never commit API keys.”
+          - paragraph [ref=f2e99]: Creates project, preference, and critical safety memories.
+          - generic [ref=f2e100]:
+            - generic [ref=f2e101]: +5 created
+            - generic [ref=f2e102]: 0/2500 tokens
+        - generic [ref=f2e103]:
+          - generic [ref=f2e104]:
+            - generic [ref=f2e105]: "2"
+            - generic [ref=f2e106]: session-002
+            - generic [ref=f2e107]: “Design the backend architecture.”
+          - paragraph [ref=f2e108]: A new session recalls the FastAPI and Alibaba Cloud preferences.
+          - generic [ref=f2e109]:
+            - generic [ref=f2e110]: 5 memories recalled
+            - generic [ref=f2e111]: critical pinned
+            - generic [ref=f2e112]: 45/2500 tokens
+        - generic [ref=f2e113]:
+          - generic [ref=f2e114]:
+            - generic [ref=f2e115]: "3"
+            - generic [ref=f2e116]: session-003
+            - generic [ref=f2e117]: “For the next iteration after this submission, migrate the frontend to Next.js instead of React + Vite.”
+          - paragraph [ref=f2e118]: Supersedes the submitted-build frontend preference with a planned migration.
+          - generic [ref=f2e119]:
+            - generic [ref=f2e120]: +1 created
+            - generic [ref=f2e121]: ↻ 1 superseded
+            - generic [ref=f2e122]: 5 memories recalled
+            - generic [ref=f2e123]: critical pinned
+            - generic [ref=f2e124]: 45/2500 tokens
+        - generic [ref=f2e125]:
+          - generic [ref=f2e126]:
+            - generic [ref=f2e127]: "4"
+            - generic [ref=f2e128]: session-004
+            - generic [ref=f2e129]: “What frontend does this submitted build use today, and what is planned after submission?”
+          - paragraph [ref=f2e130]: Distinguishes the current React + Vite implementation from the planned Next.js migration.
+          - generic [ref=f2e131]:
+            - generic [ref=f2e132]: 5 memories recalled
+            - generic [ref=f2e133]: critical pinned
+            - generic [ref=f2e134]: 45/2500 tokens
+        - generic [ref=f2e135]:
+          - generic [ref=f2e136]:
+            - heading "Active memory (5)" [level=4] [ref=f2e137]
+            - list [ref=f2e138]:
+              - listitem [ref=f2e139]: • Never commit API keys.
+              - listitem [ref=f2e140]: • After this submission, migrate the frontend to Next.js.
+              - listitem [ref=f2e141]: • I prefer a FastAPI backend.
+              - listitem [ref=f2e142]: • This project is the Qwen Hackathon Track 1 MemoryAgent.
+              - listitem [ref=f2e143]: • I prefer Alibaba Cloud deployment.
+          - generic [ref=f2e144]:
+            - heading "Superseded · ignored (1)" [level=4] [ref=f2e145]
+            - list [ref=f2e146]:
+              - listitem [ref=f2e147]: • The submitted build uses a React 18 + Vite frontend.
+    - navigation [ref=f2e34]:
+      - button "Chat" [ref=f2e35] [cursor=pointer]
+      - button "Memory Trace" [ref=f2e38] [cursor=pointer]
+      - button "Graph" [ref=f2e42] [cursor=pointer]
+      - button "Timeline" [ref=f2e49] [cursor=pointer]
+      - button "Analytics" [ref=f2e53] [cursor=pointer]
+      - button "Evaluation" [ref=f2e57] [cursor=pointer]
+      - button "Controls" [ref=f2e60] [cursor=pointer]
+      - button "Settings" [ref=f2e63] [cursor=pointer]
+    - main [ref=f2e67]:
+      - generic [ref=f2e68]:
+        - generic [ref=f2e70]:
+          - generic [ref=f2e71]:
+            - heading "Chat" [level=2] [ref=f2e72]
+            - generic [ref=f2e73]: session session-111649
+          - generic [ref=f2e75]:
+            - paragraph [ref=f2e76]: "Try the scripted demo — send these in order to watch memory get created, recalled, then superseded:"
+            - button "1. I prefer FastAPI backend, React + Vite, Alibaba Cloud, light UI, and short answers. Never commit API keys." [ref=f2e77] [cursor=pointer]
+            - button "2. Design the backend architecture." [ref=f2e78] [cursor=pointer]
+            - button "3. For the next iteration after this submission, migrate the frontend to Next.js instead of React + Vite." [ref=f2e79] [cursor=pointer]
+            - button "4. What frontend does this submitted build use today, and what is planned after submission?" [ref=f2e80] [cursor=pointer]
+          - generic [ref=f2e81]:
+            - textbox "Tell MemoPilot a preference, decision, or ask a question…" [ref=f2e82]
+            - button "Send" [ref=f2e83] [cursor=pointer]
+        - generic [ref=f2e84]: Send a chat message to see the Memory Trace — exactly which memories were retrieved, scored, injected, or skipped, and why.
+    - contentinfo [ref=f2e86]: "Qwen Cloud Global AI Hackathon · Track 1: MemoryAgent · store: sqlite+local-vectors"

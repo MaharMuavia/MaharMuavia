@@ -1,0 +1,18 @@
+{
+  "user_id": "t",
+  "project_id": "p",
+  "session_id": "s2",
+  "message": "What backend should I use?",
+  "answer": "Using my persistent memory of your project: Never commit API keys.; I prefer FastAPI backend.\n\nRegarding \"What backend should I use?\" \u2014 I have applied the active preferences and decisions above. (Offline demo mode: connect a Qwen API key for full natural-language reasoning.)",
+  "used_memory_ids": [
+    "mem_13579cb1cdee",
+    "mem_75c5a9a1219f"
+  ],
+  "memory_actions": {
+    "created": [],
+    "updated": [],
+    "superseded": [],
+    "forgotten": [],
+    "redacted": []
+  }
+}

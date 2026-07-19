@@ -1,0 +1,48 @@
+- generic [ref=f2e3]:
+  - banner [ref=f2e4]:
+    - generic [ref=f2e5]:
+      - generic [ref=f2e6]:
+        - link "Home" [ref=f2e7] [cursor=pointer]:
+          - /url: /
+        - generic [ref=f2e11]:
+          - generic [ref=f2e12]: M
+          - generic [ref=f2e13]:
+            - heading "MemoPilot IQ" [level=1] [ref=f2e14]
+            - paragraph [ref=f2e15]: qwen-memoryagent · session-111649
+      - generic [ref=f2e16]:
+        - generic [ref=f2e17]: connecting…
+        - link "GitHub" [ref=f2e18] [cursor=pointer]:
+          - /url: https://github.com/MaharMuavia/memopilot-iq
+  - generic [ref=f2e21]:
+    - generic [ref=f2e23]:
+      - generic [ref=f2e28]:
+        - heading "Run the 90-second Memory Lifecycle Demo" [level=3] [ref=f2e29]
+        - paragraph [ref=f2e30]: "Replays 4 sessions: memory creation → cross-session recall → supersession → critical recall, with full trace accounting."
+        - paragraph [ref=f2e31]: This replay is deterministic; use Chat for a live Qwen response.
+      - button "Run Judge Demo" [ref=f2e33] [cursor=pointer]
+    - navigation [ref=f2e34]:
+      - button "Chat" [ref=f2e35] [cursor=pointer]
+      - button "Memory Trace" [ref=f2e38] [cursor=pointer]
+      - button "Graph" [ref=f2e42] [cursor=pointer]
+      - button "Timeline" [ref=f2e49] [cursor=pointer]
+      - button "Analytics" [ref=f2e53] [cursor=pointer]
+      - button "Evaluation" [ref=f2e57] [cursor=pointer]
+      - button "Controls" [ref=f2e60] [cursor=pointer]
+      - button "Settings" [ref=f2e63] [cursor=pointer]
+    - main [ref=f2e67]:
+      - generic [ref=f2e68]:
+        - generic [ref=f2e70]:
+          - generic [ref=f2e71]:
+            - heading "Chat" [level=2] [ref=f2e72]
+            - generic [ref=f2e73]: session session-111649
+          - generic [ref=f2e75]:
+            - paragraph [ref=f2e76]: "Try the scripted demo — send these in order to watch memory get created, recalled, then superseded:"
+            - button "1. I prefer FastAPI backend, React + Vite, Alibaba Cloud, light UI, and short answers. Never commit API keys." [ref=f2e77] [cursor=pointer]
+            - button "2. Design the backend architecture." [ref=f2e78] [cursor=pointer]
+            - button "3. For the next iteration after this submission, migrate the frontend to Next.js instead of React + Vite." [ref=f2e79] [cursor=pointer]
+            - button "4. What frontend does this submitted build use today, and what is planned after submission?" [ref=f2e80] [cursor=pointer]
+          - generic [ref=f2e81]:
+            - textbox "Tell MemoPilot a preference, decision, or ask a question…" [ref=f2e82]
+            - button "Send" [ref=f2e83] [cursor=pointer]
+        - generic [ref=f2e84]: Send a chat message to see the Memory Trace — exactly which memories were retrieved, scored, injected, or skipped, and why.
+    - contentinfo [ref=f2e86]: "Qwen Cloud Global AI Hackathon · Track 1: MemoryAgent · backend offline"

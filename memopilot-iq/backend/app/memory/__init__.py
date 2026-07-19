@@ -13,7 +13,7 @@ from __future__ import annotations
 import uuid
 from typing import List, Optional, Tuple
 
-from ..config import ALIBABA_CLOUD_MODE, Settings, get_settings
+from ..config import ALIBABA_CLOUD_MODE, LOCAL_MODE, Settings, get_settings
 from ..models import MemoryActions, MemoryRecord, MemoryTrace
 from ..qwen_client import QwenClient
 from ..utils.logging import get_logger
@@ -57,6 +57,8 @@ class MemoryOS:
         self.context_builder = ContextBuilder(
             token_budget=self.settings.memory_token_budget,
             top_k=self.settings.retrieval_top_k,
+            min_similarity=self.settings.retrieval_min_similarity,
+            min_keyword_overlap=self.settings.retrieval_min_keyword_overlap,
         )
 
     async def init(self) -> None:
@@ -64,15 +66,28 @@ class MemoryOS:
 
     @property
     def mode(self) -> str:
-        return self.settings.resolved_mode()
+        # Report the backend that actually initialized, not merely the desired
+        # configuration. If Tablestore fails and lifespan falls back to SQLite,
+        # /health must not present that fallback as ALIBABA_CLOUD_MODE.
+        return (
+            ALIBABA_CLOUD_MODE
+            if self.store.backend_name == "alibaba-tablestore"
+            else LOCAL_MODE
+        )
 
     async def build_context(
-        self, user_id: str, project_id: Optional[str], message: str
+        self,
+        user_id: str,
+        project_id: Optional[str],
+        message: str,
+        *,
+        query_embedding: Optional[List[float]] = None,
     ) -> Tuple[str, MemoryTrace, List[MemoryRecord]]:
         """Retrieve + score + budget into a system prompt and trace."""
         # Expire/archive before retrieval so stale memories never leak in.
         await self.forgetting.sweep(user_id, project_id)
-        query_embedding = await self.qwen.embed(message)
+        if query_embedding is None:
+            query_embedding = await self.qwen.embed(message)
         scored, considered, latency = await self.retriever.retrieve(
             user_id, project_id, message, query_embedding,
             top_k=self.settings.retrieval_top_k,

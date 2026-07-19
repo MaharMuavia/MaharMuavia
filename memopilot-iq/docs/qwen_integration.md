@@ -10,7 +10,7 @@ Alibaba Cloud **DashScope** OpenAI-compatible endpoint.
 |---|---|---|---|
 | Chat / reasoning | `QwenClient.chat` | `qwen-plus` | Generates the final answer from the budgeted memory context. |
 | Memory extraction | `QwenClient.extract_json` | `qwen-plus` | The "Memory Editor" prompt returns strict JSON of `new_memories`, `updates`, `forget`. |
-| Reflection / contradiction | `QwenClient.extract_json` | `qwen-plus` | The same structured pass flags updates/supersession; the SupersessionEngine applies them. |
+| General contradiction updates | `QwenClient.extract_json` | `qwen-plus` | The structured pass flags updates outside the deterministic taxonomy; ownership checks and lifecycle rules apply them. |
 | Embeddings | `QwenClient.embed` | `text-embedding-v3` | Vectorises memories + queries for semantic retrieval. |
 
 ## Configuration
@@ -39,7 +39,7 @@ implementation:
 - **embed** → a deterministic hashing embedding (bag-of-words → fixed dim).
 
 This means a judge can clone and run the project with zero credentials and still
-see every MemoryOS behaviour; adding a real key simply upgrades answer quality.
+see every MemoPilot memory-layer behaviour; adding a real key simply upgrades answer quality.
 
 ## Strict JSON handling
 

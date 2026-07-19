@@ -53,7 +53,9 @@ async def lifespan(app: FastAPI):
         await memos.store.init()
     app.state.memos = memos
     app.state.oss = OSSClient(settings)
-    app.state.last_eval_report = None
+    app.state.last_eval_report = eval_routes.load_persisted_report(
+        settings.eval_report_path
+    )
     app.state.last_traces = {}
     logger.info("MemoPilot IQ started in %s (store: %s, qwen: %s)",
                 memos.mode, memos.store.backend_name, settings.qwen_configured)
@@ -77,10 +79,26 @@ def create_app() -> FastAPI:
         version="1.0.0",
         lifespan=lifespan,
     )
+    configured_origins = [
+        origin.strip()
+        for origin in settings.frontend_origin.split(",")
+        if origin.strip()
+    ]
+    if "*" in configured_origins:
+        allowed_origins = ["*"]
+    else:
+        allowed_origins = list(dict.fromkeys([
+            *configured_origins,
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ]))
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[settings.frontend_origin, "http://localhost:5173", "http://127.0.0.1:5173"],
-        allow_credentials=True,
+        allow_origins=allowed_origins,
+        # The public anonymous identity cookie is same-origin in production.
+        # Cross-origin callers use API keys, so CORS credentials stay disabled
+        # and FRONTEND_ORIGIN=* remains standards-safe for local API testing.
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )

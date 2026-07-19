@@ -62,6 +62,11 @@ export default function DashboardPage() {
 
   function onActivity(resp: ChatResponse) {
     setLast(resp);
+    setHealth((current) =>
+      current
+        ? { ...current, qwen_provider_status: resp.qwen_provider_status }
+        : current
+    );
     setRefreshKey((k) => k + 1);
   }
 
@@ -109,7 +114,7 @@ export default function DashboardPage() {
       </header>
 
       <div className="mx-auto max-w-6xl px-4 py-6">
-        {/* Judge demo — the headline proof of MemoryOS */}
+        {/* Judge demo — the headline proof of the memory-governance layer */}
         <JudgeDemoPanel onComplete={() => setRefreshKey((k) => k + 1)} />
 
         {/* Tabs */}
@@ -199,7 +204,9 @@ function StatusBadges({
         title={
           qwenOnline
             ? `Qwen online · ${health.qwen_model}`
-            : "Qwen offline — deterministic local fallback"
+            : qwenFallback
+              ? "The most recent Qwen request timed out; that turn used the deterministic fallback"
+              : "Qwen is not configured; deterministic local fallback is active"
         }
       >
         <span
@@ -213,7 +220,7 @@ function StatusBadges({
         className={`chip ${cloud ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-700"}`}
         title={`Memory store: ${health.memory_store}`}
       >
-        {cloud ? "Alibaba Store" : "SQLite"}
+        {cloud ? "Alibaba Store" : "Local Store"}
       </span>
     </>
   );

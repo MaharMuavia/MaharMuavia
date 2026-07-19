@@ -1,16 +1,20 @@
-# Assets
+# Repository Assets
 
-- `architecture.mmd` — Mermaid source for the system architecture diagram.
-- `architecture.svg` — Rendered architecture diagram (vector, viewable on GitHub).
-- `architecture.png` *(optional)* — Raster export. Generate with:
-  ```bash
-  npx -y @mermaid-js/mermaid-cli -i architecture.mmd -o architecture.png
-  ```
+- `architecture.mmd` — Mermaid source for the submitted Alibaba Cloud
+  architecture.
+- `architecture.svg` — canonical vector architecture diagram, rendered directly
+  in GitHub and the README.
+- `memopilot-iq-hackathon-deck.pptx` — editable 11-slide submission deck.
 
-## Screenshots to add before submission
-Capture these from the running app (`npm run dev`) and drop them here:
-- `screenshot_chat_trace.png` — Chat + Memory Trace side by side.
-- `screenshot_timeline.png` — Memory Timeline with created/superseded events.
-- `screenshot_eval.png` — Evaluation Dashboard after running the benchmark.
-- `proof_health_alibaba.png`, `proof_tablestore.png`, `proof_oss.png` —
-  Alibaba Cloud deployment proof (see `docs/deployment_alibaba.md`).
+## Deployment proof screenshots
+
+The images in [`proof/`](proof/) were captured from the public Alibaba Cloud
+deployment and intentionally exclude credentials and private console details.
+
+| File | What it proves |
+|---|---|
+| `proof/01-cloud-memory-retrieval.png` | A scored Alibaba Tablestore memory is injected into the Qwen context. |
+| `proof/02-automatic-memory-creation.png` | An explicit user request creates durable memory automatically. |
+| `proof/03-cross-session-recall.png` | A new session recalls the automatically created memory from Tablestore. |
+
+See [the full proof narrative](../docs/alibaba_cloud_proof.md).

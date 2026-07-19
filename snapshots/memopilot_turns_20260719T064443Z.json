@@ -1,0 +1,21 @@
+{
+  "user_id": "trace-user",
+  "project_id": "p",
+  "session_id": "latest",
+  "message": "I prefer FastAPI.",
+  "answer": "Regarding \"I prefer FastAPI.\" \u2014 no relevant long-term memory was found yet, so I am answering from the current message only. (Offline demo mode.)",
+  "used_memory_ids": [],
+  "memory_actions": {
+    "created": [
+      {
+        "memory_id": "mem_74d1db0fd87d",
+        "type": "preference",
+        "content": "I prefer FastAPI."
+      }
+    ],
+    "updated": [],
+    "superseded": [],
+    "forgotten": [],
+    "redacted": []
+  }
+}

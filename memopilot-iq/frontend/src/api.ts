@@ -69,6 +69,8 @@ export interface ChatResponse {
   memory_actions: MemoryActions;
   trace: MemoryTrace;
   mode: string;
+  qwen_provider_status: "online" | "offline" | "degraded_offline_fallback";
+  qwen_fallback_used: boolean;
 }
 
 export interface HealthInfo {
@@ -82,6 +84,9 @@ export interface HealthInfo {
   alibaba_configured: boolean;
   oss_configured: boolean;
   token_budget: number;
+  tenant_isolation: string;
+  storage_schema: string;
+  build_sha: string;
 }
 
 export interface TimelineEvent {
@@ -95,8 +100,16 @@ export interface TimelineEvent {
 }
 
 export interface EvalReport {
+  generated_at: string;
+  build_sha: string;
+  duration_seconds: number;
+  primary_backbone: string;
+  provider_status: string;
+  provider_fallbacks: number;
   memory_agent_accuracy: number;
   baseline_no_memory_accuracy: number;
+  baseline_full_history_accuracy: number;
+  baseline_history_summary_accuracy: number;
   memory_recall_at_context: number;
   outdated_memory_errors: number;
   outdated_memory_avoidance: number;
@@ -104,7 +117,14 @@ export interface EvalReport {
   token_savings_percent: number;
   response_accuracy_delta: number;
   retrieval_top_k: number;
+  memory_token_budget: number;
+  chat_model: string;
+  embedding_model: string;
   evaluator: string;
+  provider_token_usage: {
+    operations: Record<string, Record<string, number>>;
+    totals: Record<string, number>;
+  };
   avg_retrieval_latency_ms: number;
   retrieval_latency_ms: number;
   scenarios: {
@@ -112,7 +132,11 @@ export interface EvalReport {
     title: string;
     memory_agent_correct: boolean;
     baseline_correct: boolean;
-    injected_memories: string[];
+    full_history_correct: boolean;
+    history_summary_correct: boolean;
+    agent_answer: string;
+    answer_failure_reason?: string | null;
+    context_recall: boolean;
     tokens_used: number;
     forbidden_leaked: boolean;
   }[];
@@ -149,7 +173,31 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export const DEFAULT_USER = "demo-user";
+function getOrCreateDemoUser(): string {
+  const storageKey = "memopilot-demo-user-v1";
+  try {
+    const existing = window.localStorage.getItem(storageKey);
+    if (existing) return existing;
+    const random = new Uint32Array(3);
+    if (window.crypto?.getRandomValues) {
+      window.crypto.getRandomValues(random);
+    } else {
+      random.set([
+        Math.floor(Math.random() * 0xffffffff),
+        Date.now() >>> 0,
+        Math.floor(Math.random() * 0xffffffff),
+      ]);
+    }
+    const suffix = Array.from(random, (value) => value.toString(16).padStart(8, "0")).join("");
+    const userId = `demo-${suffix}`;
+    window.localStorage.setItem(storageKey, userId);
+    return userId;
+  } catch {
+    return `demo-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
+
+export const DEFAULT_USER = getOrCreateDemoUser();
 export const DEFAULT_PROJECT = "qwen-memoryagent";
 
 export const api = {
@@ -173,17 +221,17 @@ export const api = {
       `/api/memories/timeline?user_id=${DEFAULT_USER}&project_id=${DEFAULT_PROJECT}`
     ),
   pin: (id: string) =>
-    req<MemoryRecord>(`/api/memories/${id}`, {
+    req<MemoryRecord>(`/api/memories/${id}?user_id=${DEFAULT_USER}`, {
       method: "PATCH",
       body: JSON.stringify({ pin: true }),
     }),
   archive: (id: string) =>
-    req<MemoryRecord>(`/api/memories/${id}`, {
+    req<MemoryRecord>(`/api/memories/${id}?user_id=${DEFAULT_USER}`, {
       method: "PATCH",
       body: JSON.stringify({ archive: true }),
     }),
   remove: (id: string) =>
-    req<{ deleted: string }>(`/api/memories/${id}`, { method: "DELETE" }),
+    req<{ deleted: string }>(`/api/memories/${id}?user_id=${DEFAULT_USER}`, { method: "DELETE" }),
   forgetAll: () =>
     req<{ forgotten: number }>(
       `/api/memories/forget-all?user_id=${DEFAULT_USER}&project_id=${DEFAULT_PROJECT}`,
@@ -194,6 +242,7 @@ export const api = {
       `/api/memories/export?user_id=${DEFAULT_USER}&project_id=${DEFAULT_PROJECT}`
     ),
   runEval: () => req<EvalReport>("/api/eval/run", { method: "POST" }),
+  getEvalReport: () => req<EvalReport>("/api/eval/report"),
   runDemo: () => req<DemoResult>("/api/demo/run", { method: "POST" }),
   getTrace: (sessionId: string) => req<unknown>(`/api/trace/${sessionId}`),
   reflect: () =>
@@ -215,7 +264,7 @@ export interface ReflectionReport {
   reviewed: number;
   merged: { memory_id: string; into: string }[];
   promoted: { memory_id: string; from: number; to: number }[];
-  insights: { memory_id: string; summary: string }[];
+  summaries: { memory_id: string; summary: string; source_memory_ids: string[] }[];
   ran_at: string;
 }
 
@@ -243,7 +292,7 @@ export interface GraphNode {
   status: string;
   is_critical: boolean;
   importance: number;
-  is_insight: boolean;
+  is_consolidation_summary: boolean;
   tags: string[];
 }
 

@@ -13,6 +13,7 @@ whether Qwen is actually configured.
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import math
@@ -34,6 +35,8 @@ class QwenClient:
         self.settings = settings or get_settings()
         self._client: Optional[httpx.AsyncClient] = None
         self._provider_status = "online" if self.settings.qwen_configured else "offline"
+        self._fallback_count = 0
+        self._usage: Dict[str, Dict[str, int]] = {}
 
     @property
     def online(self) -> bool:
@@ -44,6 +47,31 @@ class QwenClient:
         """Current provider state without pretending a failed live call succeeded."""
         return self._provider_status
 
+    @property
+    def fallback_count(self) -> int:
+        """Number of configured-provider calls that required offline fallback."""
+        return self._fallback_count
+
+    @property
+    def usage(self) -> Dict[str, Any]:
+        """Return provider-reported token usage without model-price assumptions."""
+        operations = {name: dict(values) for name, values in self._usage.items()}
+        totals: Dict[str, int] = {}
+        for values in operations.values():
+            for key, value in values.items():
+                totals[key] = totals.get(key, 0) + value
+        return {"operations": operations, "totals": totals}
+
+    def _record_usage(self, operation: str, data: Dict[str, Any]) -> None:
+        usage = data.get("usage")
+        if not isinstance(usage, dict):
+            return
+        bucket = self._usage.setdefault(operation, {})
+        for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
+            value = usage.get(key)
+            if isinstance(value, int) and value >= 0:
+                bucket[key] = bucket.get(key, 0) + value
+
     async def _http(self) -> httpx.AsyncClient:
         if self._client is None:
             self._client = httpx.AsyncClient(
@@ -52,9 +80,46 @@ class QwenClient:
                     "Authorization": f"Bearer {self.settings.qwen_api_key}",
                     "Content-Type": "application/json",
                 },
-                timeout=httpx.Timeout(45.0),
+                timeout=httpx.Timeout(
+                    self.settings.qwen_request_timeout_seconds,
+                    connect=min(10.0, self.settings.qwen_request_timeout_seconds),
+                ),
             )
         return self._client
+
+    @staticmethod
+    def _retryable(exc: Exception) -> bool:
+        if isinstance(exc, httpx.HTTPStatusError):
+            return exc.response.status_code in {408, 429, 500, 502, 503, 504}
+        return isinstance(exc, httpx.TransportError)
+
+    async def _post(
+        self,
+        path: str,
+        payload: Dict[str, Any],
+        operation: str,
+    ) -> httpx.Response:
+        """POST to DashScope with bounded retries for transient failures."""
+        client = await self._http()
+        attempts = self.settings.qwen_max_retries + 1
+        for attempt in range(attempts):
+            try:
+                response = await client.post(path, json=payload)
+                response.raise_for_status()
+                return response
+            except Exception as exc:
+                final_attempt = attempt + 1 >= attempts
+                if final_attempt or not self._retryable(exc):
+                    raise
+                logger.warning(
+                    "Qwen %s attempt %d/%d failed (%s); retrying",
+                    operation,
+                    attempt + 1,
+                    attempts,
+                    type(exc).__name__,
+                )
+                await asyncio.sleep(0.5 * (2 ** attempt))
+        raise RuntimeError("unreachable Qwen retry state")
 
     async def aclose(self) -> None:
         if self._client is not None:
@@ -68,21 +133,28 @@ class QwenClient:
         if not self.online:
             return self._offline_chat(messages)
         try:
-            client = await self._http()
-            resp = await client.post(
+            resp = await self._post(
                 "/chat/completions",
-                json={
+                {
                     "model": self.settings.qwen_chat_model,
                     "messages": messages,
                     "temperature": temperature,
+                    "enable_thinking": self.settings.qwen_enable_thinking,
+                    "max_tokens": self.settings.qwen_max_output_tokens,
                 },
+                "chat",
             )
-            resp.raise_for_status()
             data = resp.json()
+            self._record_usage("chat", data)
             self._provider_status = "online"
             return data["choices"][0]["message"]["content"].strip()
         except Exception as exc:  # pragma: no cover - network failure path
-            logger.warning("Qwen chat failed (%s); using offline fallback", exc)
+            logger.warning(
+                "Qwen chat failed (%s: %s); using offline fallback",
+                type(exc).__name__,
+                str(exc) or "no detail",
+            )
+            self._fallback_count += 1
             self._provider_status = "degraded_offline_fallback"
             return self._offline_chat(messages)
 
@@ -91,47 +163,93 @@ class QwenClient:
         if not self.online:
             return self._offline_extract(user_prompt)
         try:
-            client = await self._http()
-            resp = await client.post(
+            resp = await self._post(
                 "/chat/completions",
-                json={
+                {
                     "model": self.settings.qwen_chat_model,
                     "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
                     "temperature": 0.0,
+                    "enable_thinking": False,
+                    "max_tokens": max(1200, self.settings.qwen_max_output_tokens),
                     "response_format": {"type": "json_object"},
                 },
+                "extraction",
             )
-            resp.raise_for_status()
-            content = resp.json()["choices"][0]["message"]["content"]
+            data = resp.json()
+            self._record_usage("extraction", data)
+            content = data["choices"][0]["message"]["content"]
             self._provider_status = "online"
             return _safe_json(content)
         except Exception as exc:  # pragma: no cover
-            logger.warning("Qwen extract failed (%s); using offline fallback", exc)
+            logger.warning(
+                "Qwen extract failed (%s: %s); using offline fallback",
+                type(exc).__name__,
+                str(exc) or "no detail",
+            )
+            self._fallback_count += 1
             self._provider_status = "degraded_offline_fallback"
             return self._offline_extract(user_prompt)
+
+    def deterministic_extract(self, user_message: str) -> Dict[str, Any]:
+        """Extract a memory deterministically when an explicit request is missed.
+
+        This is deliberately separate from provider-failure handling: it keeps
+        the live provider status intact while making an explicit user request
+        to remember a fact reliable even if the model returns an empty list.
+        """
+        result = self._offline_extract(f"USER MESSAGE:\n{user_message}")
+        for memory in result.get("new_memories", []):
+            memory["reason"] = (
+                "Deterministic fallback classified an explicit memory request."
+            )
+        return result
 
     # ------------------------------------------------------------------
     # Embeddings
     # ------------------------------------------------------------------
     async def embed(self, text: str) -> List[float]:
+        return (await self.embed_many([text]))[0]
+
+    async def embed_many(self, texts: List[str]) -> List[List[float]]:
+        """Embed a small batch, falling back deterministically as a whole."""
+        if not texts:
+            return []
         if not self.online:
-            return self._offline_embed(text)
+            return [self._offline_embed(text) for text in texts]
         try:
-            client = await self._http()
-            resp = await client.post(
+            resp = await self._post(
                 "/embeddings",
-                json={"model": self.settings.qwen_embedding_model, "input": text},
+                {"model": self.settings.qwen_embedding_model, "input": texts},
+                "embedding",
             )
-            resp.raise_for_status()
             self._provider_status = "online"
-            return resp.json()["data"][0]["embedding"]
+            data = resp.json()
+            self._record_usage("embedding", data)
+            items = sorted(data["data"], key=lambda item: item.get("index", 0))
+            embeddings = [item["embedding"] for item in items]
+            if len(embeddings) != len(texts):
+                raise ValueError("Qwen embedding response count did not match request")
+            return embeddings
         except Exception as exc:  # pragma: no cover
-            logger.warning("Qwen embed failed (%s); using offline fallback", exc)
+            logger.warning(
+                "Qwen embed failed (%s: %s); using offline fallback",
+                type(exc).__name__,
+                str(exc) or "no detail",
+            )
+            self._fallback_count += 1
             self._provider_status = "degraded_offline_fallback"
-            return self._offline_embed(text)
+            return [self._offline_embed(text) for text in texts]
+
+    def deterministic_embed(self, text: str) -> List[float]:
+        """Build an offline embedding without making a provider request.
+
+        This is intentionally public for reproducible lifecycle demos and
+        local evaluation fixtures. Normal chat continues to use :meth:`embed`.
+        """
+        return self._offline_embed(text)
 
     # ==================================================================
     # Offline deterministic fallbacks (no network, no API key)

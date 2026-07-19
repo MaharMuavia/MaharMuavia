@@ -77,6 +77,46 @@ _CONTRADICTION_CUES = [
     "rather than", "not anymore", "use .* instead",
 ]
 
+_EXPLICIT_MEMORY_INTENT = re.compile(
+    r"\bremember\s+(?:this|that|it|for\s+later)\b|"
+    r"\b(?:save|store|keep|note)\s+(?:this|that|it)\s+(?:for\s+later|as\s+a\s+memory)\b",
+    re.IGNORECASE,
+)
+
+_NON_DURABLE_REQUEST_START = re.compile(
+    r"^(?:what|which|who|why|when|where|how|can|could|would|should|do|does|"
+    r"is|are|design|show|explain|tell|give|write|create|generate|summarize|"
+    r"analyse|analyze|help)\b",
+    re.IGNORECASE,
+)
+
+_DURABLE_SIGNAL = re.compile(
+    r"\b(?:i|we)\s+(?:prefer|want|need|decided|use|will|am|are)\b|"
+    r"\b(?:my|our)\s+[^.!?]{1,80}\s+is\b|"
+    r"^(?:use|prefer|remember|never|must|do not|don't|temporary note|deadline)\b|"
+    r"\b(?:changed my mind|switch to|migrate|after this submission|forget|archive)\b",
+    re.IGNORECASE,
+)
+
+
+def should_extract_memory(message: str) -> bool:
+    """Return False for pure requests that cannot contain durable user facts."""
+    stripped = message.strip()
+    if not stripped:
+        return False
+    if _EXPLICIT_MEMORY_INTENT.search(stripped):
+        return True
+    # Check request-leading verbs before broad first-person signals. Without
+    # this ordering, "What backend should I use?" is misread as the durable
+    # statement "I use ..." and triggers an unnecessary provider call.
+    if _NON_DURABLE_REQUEST_START.match(stripped):
+        return False
+    if _DURABLE_SIGNAL.search(stripped):
+        return True
+    if "?" in stripped:
+        return False
+    return True
+
 def _similar(a: str, b: str) -> float:
     return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
@@ -113,6 +153,12 @@ class MemoryExtractor:
             actions.redacted.append("Secret-like content detected and redacted before extraction.")
         safe_message = redact_secrets(message)
 
+        # Pure questions and assistant-directed commands contain no durable
+        # user fact. Skipping the Memory Editor avoids a second, unnecessary
+        # Qwen completion and materially lowers live latency and timeout risk.
+        if not should_extract_memory(safe_message):
+            return actions
+
         existing = await self.store.list(
             user_id, project_id, statuses=[MemoryStatus.active.value, MemoryStatus.pinned.value]
         )
@@ -122,9 +168,18 @@ class MemoryExtractor:
         )
 
         new_memories: List[Dict[str, Any]] = result.get("new_memories", []) or []
+        # The model occasionally treats an explicit "remember this" sentence
+        # as conversational filler and returns an empty list. That makes the
+        # core product promise unreliable, so use the deterministic extractor
+        # only for explicit memory intent. Secret filtering below still guards
+        # every resulting record before it is persisted.
+        if not new_memories and _EXPLICIT_MEMORY_INTENT.search(safe_message):
+            result = self.qwen.deterministic_extract(safe_message)
+            new_memories = result.get("new_memories", []) or []
         explicit_contradiction = any(
             re.search(cue, safe_message.lower()) for cue in _CONTRADICTION_CUES
         )
+        pending_records: List[MemoryRecord] = []
 
         for raw in new_memories:
             content = redact_secrets(str(raw.get("content", "")).strip())[:4000]
@@ -159,12 +214,23 @@ class MemoryExtractor:
                 actions.superseded.append({"memory_id": old.memory_id, "superseded_by": record.memory_id})
                 await self._event(actions, user_id, project_id, "superseded", old, old.reason)
 
-            # 6. Embedding + persist.
-            record.embedding = await self.qwen.embed(record.content)
+            # Keep provider embedding calls batched. This avoids a separate
+            # network round trip for every extracted fact in one user turn.
+            pending_records.append(record)
+            actions.created.append({"memory_id": record.memory_id, "type": record.type.value, "content": record.content})
+
+        # 6. Embed and persist accepted new records together. ``embed_many``
+        # supplies a same-size deterministic fallback when the provider fails.
+        embeddings = await self.qwen.embed_many(
+            [record.content for record in pending_records]
+        )
+        for record, embedding in zip(pending_records, embeddings):
+            record.embedding = embedding
             await self.store.add(record)
             existing.append(record)
-            actions.created.append({"memory_id": record.memory_id, "type": record.type.value, "content": record.content})
-            await self._event(actions, user_id, project_id, "created", record, record.reason)
+            await self._event(
+                actions, user_id, project_id, "created", record, record.reason
+            )
 
         # Honor the model's structured supersede/archive updates (complements
         # the heuristic contradiction detection above; the LLM is good at
@@ -173,16 +239,91 @@ class MemoryExtractor:
             old_id = str(upd.get("old_memory_id") or "")
             action = upd.get("action")
             mem = await self.store.get(old_id) if old_id else None
-            if not mem or mem.status not in {MemoryStatus.active, MemoryStatus.pinned}:
+            if (
+                not mem
+                or mem.user_id != user_id
+                or mem.project_id not in {project_id, None}
+                or mem.status not in {MemoryStatus.active, MemoryStatus.pinned}
+            ):
                 continue
             if mem.is_critical:
                 continue
             if action == "supersede":
+                new_content = redact_secrets(
+                    str(upd.get("new_content") or "").strip()
+                )[:4000]
+                same_turn = [
+                    candidate
+                    for candidate in existing
+                    if candidate.memory_id != mem.memory_id
+                    and candidate.source_message_id == source_message_id
+                    and candidate.status in {MemoryStatus.active, MemoryStatus.pinned}
+                ]
+                replacement = None
+                if same_turn:
+                    replacement = max(
+                        same_turn,
+                        key=lambda candidate: (
+                            _similar(candidate.content, new_content)
+                            if new_content
+                            else candidate.importance
+                        ),
+                    )
+                elif new_content and not contains_secret(new_content):
+                    replacement = self._to_record(
+                        {
+                            "type": mem.type.value,
+                            "content": new_content,
+                            "summary": new_content[:80],
+                            "importance": max(0.7, mem.importance),
+                            "confidence": upd.get("confidence", 0.85),
+                            "tags": [*mem.tags, "qwen-update"],
+                            "privacy_level": mem.privacy_level.value,
+                            "reason": upd.get("reason") or "Replacement from Qwen update.",
+                        },
+                        user_id,
+                        project_id,
+                        session_id,
+                        source_message_id,
+                        new_content,
+                    )
+                    replacement.embedding = await self.qwen.embed(replacement.content)
+                    await self.store.add(replacement)
+                    existing.append(replacement)
+                    actions.created.append({
+                        "memory_id": replacement.memory_id,
+                        "type": replacement.type.value,
+                        "content": replacement.content,
+                    })
+                    await self._event(
+                        actions,
+                        user_id,
+                        project_id,
+                        "created",
+                        replacement,
+                        replacement.reason,
+                    )
+
+                # A supersede action without a durable replacement would erase
+                # the current truth. Preserve the old memory instead.
+                if replacement is None:
+                    logger.warning(
+                        "Ignored Qwen supersede for %s because no replacement was supplied",
+                        mem.memory_id,
+                    )
+                    continue
+                replacement.supersedes = mem.memory_id
+                await self.store.update(replacement)
                 mem.status = MemoryStatus.superseded
+                mem.superseded_by = replacement.memory_id
                 mem.updated_at = datetime.now(timezone.utc)
                 mem.reason = str(upd.get("reason") or "Superseded by a newer decision.")
                 await self.store.update(mem)
-                actions.superseded.append({"memory_id": mem.memory_id, "via": "llm_update"})
+                actions.superseded.append({
+                    "memory_id": mem.memory_id,
+                    "superseded_by": replacement.memory_id,
+                    "via": "llm_update",
+                })
                 await self._event(actions, user_id, project_id, "superseded", mem, mem.reason)
             elif action == "archive":
                 mem.status = MemoryStatus.archived
@@ -194,7 +335,7 @@ class MemoryExtractor:
         # Explicit forget instructions from the model.
         for f in result.get("forget", []) or []:
             mem = await self.store.get(f.get("memory_id", ""))
-            if mem:
+            if mem and mem.user_id == user_id and mem.project_id in {project_id, None}:
                 mem.status = MemoryStatus.expired if f.get("action") == "expire" else MemoryStatus.archived
                 mem.updated_at = datetime.now(timezone.utc)
                 await self.store.update(mem)
@@ -224,7 +365,10 @@ class MemoryExtractor:
         except ValueError:
             privacy_level = PrivacyLevel.public
 
-        is_critical = bool(raw.get("is_critical")) or mtype == MemoryType.critical
+        # Provider JSON is untrusted. Criticality must agree with the validated
+        # memory type; otherwise an ordinary preference can bypass relevance
+        # admission and consume context on every future turn.
+        is_critical = mtype == MemoryType.critical
         # Model output is untrusted. Clamp it before Pydantic validates the
         # record so one malformed extraction cannot break the chat request or
         # inflate a context window.
